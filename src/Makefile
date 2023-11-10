@@ -13,7 +13,7 @@
 MAJVER=  2
 MINVER=  1
 ABIVER=  5.1
-NODOTABIVER= 51
+NODOTABIVER= 5.1
 
 ##############################################################################
 #############################  COMPILER OPTIONS  #############################
@@ -70,7 +70,7 @@ CCWARN= -Wall
 # as dynamic mode.
 #
 # Mixed mode creates a static + dynamic library and a statically linked luajit.
-BUILDMODE= mixed
+BUILDMODE= dynamic
 #
 # Static mode creates a static library and a statically linked luajit.
 #BUILDMODE= static
@@ -86,7 +86,7 @@ BUILDMODE= mixed
 ##############################################################################
 # Enable/disable these features as needed, but make sure you force a full
 # recompile with "make clean", followed by "make".
-XCFLAGS=
+XCFLAGS="-std=gnu99"
 #
 # Permanently disable the FFI extension to reduce the size of the LuaJIT
 # executable. But please consider that the FFI library is compiled-in,
@@ -98,7 +98,7 @@ XCFLAGS=
 # enabled by default. Some other features that *might* break some existing
 # code (e.g. __pairs or os.execute() return values) can be enabled here.
 # Note: this does not provide full compatibility with Lua 5.2 at this time.
-#XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
+XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
 #
 # Disable the JIT compiler, i.e. turn LuaJIT into a pure interpreter.
 #XCFLAGS+= -DLUAJIT_DISABLE_JIT
@@ -107,7 +107,7 @@ XCFLAGS=
 # dual-number (2) mode. Uncomment one of these lines to override the
 # default mode. Please see LJ_ARCH_NUMMODE in lj_arch.h for details.
 #XCFLAGS+= -DLUAJIT_NUMMODE=1
-#XCFLAGS+= -DLUAJIT_NUMMODE=2
+XCFLAGS+= -DLUAJIT_NUMMODE=2
 #
 # Disable LJ_GC64 mode for x64.
 #XCFLAGS+= -DLUAJIT_DISABLE_GC64
@@ -140,7 +140,7 @@ XCFLAGS=
 #
 # Turn on assertions for the Lua/C API to debug problems with lua_* calls.
 # This is rather slow -- use only while developing C libraries/embeddings.
-#XCFLAGS+= -DLUA_USE_APICHECK
+XCFLAGS+= -DLUA_USE_APICHECK
 #
 # Turn on assertions for the whole LuaJIT VM. This significantly slows down
 # everything. Use only if you suspect a problem with LuaJIT itself.
@@ -214,7 +214,7 @@ TARGET_AR= $(CROSS)ar rcus
 TARGET_STRIP= $(CROSS)strip
 
 TARGET_LIBPATH= $(or $(PREFIX),/usr/local)/$(or $(MULTILIB),lib)
-TARGET_SONAME= libluajit-$(ABIVER).so.$(MAJVER)
+TARGET_SONAME= libluajit$(ABIVER).so
 TARGET_DYLIBNAME= libluajit-$(ABIVER).$(MAJVER).dylib
 TARGET_DYLIBPATH= $(TARGET_LIBPATH)/$(TARGET_DYLIBNAME)
 TARGET_DLLNAME= lua$(NODOTABIVER).dll
@@ -225,7 +225,8 @@ TARGET_DYNXLDOPTS=
 TARGET_LFSFLAGS= -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE
 TARGET_XCFLAGS= $(TARGET_LFSFLAGS) -U_FORTIFY_SOURCE
 TARGET_XLDFLAGS=
-TARGET_XLIBS= -lm
+#remove -static-libgcc for MacOS
+TARGET_XLIBS= -lm -static-libgcc
 TARGET_TCFLAGS= $(CCOPTIONS) $(TARGET_XCFLAGS) $(TARGET_FLAGS) $(TARGET_CFLAGS)
 TARGET_ACFLAGS= $(CCOPTIONS) $(TARGET_XCFLAGS) $(TARGET_FLAGS) $(TARGET_CFLAGS)
 TARGET_ASFLAGS= $(ASOPTIONS) $(TARGET_XCFLAGS) $(TARGET_FLAGS) $(TARGET_CFLAGS)
@@ -315,6 +316,7 @@ ifeq (,$(shell $(TARGET_CC) -o /dev/null -c -x c /dev/null -fno-stack-protector 
   TARGET_XCFLAGS+= -fno-stack-protector
 endif
 ifeq (Darwin,$(TARGET_SYS))
+  MACOSX_DEPLOYMENT_TARGET=10.7
   ifeq (,$(MACOSX_DEPLOYMENT_TARGET))
     $(error missing: export MACOSX_DEPLOYMENT_TARGET=XX.YY)
   endif
@@ -523,7 +525,7 @@ LIB_VMDEFP= $(LIB_VMDEF)
 
 LUAJIT_O= luajit.o
 LUAJIT_A= libluajit.a
-LUAJIT_SO= libluajit.so
+LUAJIT_SO= libluajit$(NODOTABIVER).so
 LUAJIT_T= luajit
 
 ALL_T= $(LUAJIT_T) $(LUAJIT_A) $(LUAJIT_SO) $(HOST_T)
